@@ -1,0 +1,42 @@
+# TTS System Configuration Example
+
+tts:
+  # Operational mode: local, cloud, or self-hosted
+  mode: cloud
+  
+  # Cloud provider settings (required when mode is 'cloud')
+  cloud_provider: openai  # openai or google
+  openai_api_key: ${OPENAI_API_KEY}  # Set via environment variable
+  # google_credentials_path: /path/to/credentials.json
+  
+  # Self-hosted settings (required when mode is 'self-hosted')
+  # self_hosted_provider: vits  # vits, bark, xtts, or coqui
+  # self_hosted_endpoint: http://localhost:5000
+  
+  # Audio settings
+  default_voice: alloy  # For OpenAI: alloy, echo, fable, onyx, nova, shimmer
+  default_speed: 1.0  # 0.25 to 4.0
+  default_format: mp3  # mp3, wav, or ogg
+  max_text_length: 5000
+  
+  # Storage settings
+  storage_type: local  # local or cloud
+  local_storage_path: ./audio_files
+  # cloud_storage_bucket: my-tts-bucket
+  base_url: http://localhost:8000
+  
+  # Cleanup settings
+  audio_expiration_hours: 24
+  cleanup_interval_hours: 1
+  
+  # Rate limiting
+  rate_limit_per_minute: 60
+  
+  # Text preprocessing
+  url_handling: replace  # replace, remove, or keep
+  code_block_handling: replace  # replace, skip, or keep
+  strip_markdown: true
+  
+  # Retry settings (for cloud providers)
+  max_retries: 3
+  retry_backoff_base: 2.0

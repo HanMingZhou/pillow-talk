@@ -1,0 +1,74 @@
+[tool.poetry]
+name = "pillow-talk-backend"
+version = "0.1.0"
+description = "Pillow Talk - 多模态智能视觉语音助手后端服务"
+authors = ["Pillow Talk Team <team@pillowtalk.ai>"]
+readme = "README.md"
+packages = [{include = "pillow_talk", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.109.0"
+uvicorn = {extras = ["standard"], version = "^0.27.0"}
+pydantic = "^2.6.0"
+pydantic-settings = "^2.1.0"
+httpx = "^0.26.0"
+openai = "^1.10.0"
+structlog = "^24.1.0"
+pillow = "^10.2.0"
+cryptography = "^42.0.0"
+python-multipart = "^0.0.9"
+volcengine-python-sdk = {extras = ["ark"], version = "^1.0.0", optional = true}
+zai-sdk = {version = "^0.2.2", optional = true}
+google-genai = {version = "^0.2.0", optional = true}
+google-cloud-texttospeech = {version = "^2.16.0", optional = true}
+schedule = "^1.2.0"
+pyyaml = "^6.0.1"
+
+[tool.poetry.extras]
+ark = ["volcengine-python-sdk"]
+glm = ["zai-sdk"]
+gemini = ["google-genai"]
+google-tts = ["google-cloud-texttospeech"]
+all = ["volcengine-python-sdk", "zai-sdk", "google-genai", "google-cloud-texttospeech"]
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0.0"
+pytest-asyncio = "^0.23.0"
+pytest-cov = "^4.1.0"
+hypothesis = "^6.98.0"
+ruff = "^0.2.0"
+mypy = "^1.8.0"
+pre-commit = "^3.6.0"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.lint]
+fixable = ["ALL"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--cov=src/pillow_talk --cov-report=html --cov-report=term-missing"
+
+[tool.hypothesis]
+max_examples = 100
+deadline = None
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
