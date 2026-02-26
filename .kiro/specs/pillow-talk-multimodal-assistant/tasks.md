@@ -584,8 +584,8 @@
     - 测试权限处理
     - _Requirements: 1.6, 1.7, 1.8_
 
-- [-] 22. 导航和路由
-  - [ ] 22.1 实现导航结构（src/navigation/AppNavigator.tsx）
+- [x] 22. 导航和路由
+  - [x] 22.1 实现导航结构（src/navigation/AppNavigator.tsx）
     - 使用 react-navigation 配置导航
     - 创建 Stack Navigator
     - 定义路由：CameraScreen、ChatScreen、SettingsScreen、HistoryScreen、PromptEditorScreen
@@ -593,15 +593,15 @@
     - 适配刘海屏和灵动岛设计
     - _Requirements: 11.1, 11.2, 11.3, 11.5, 11.8_
 
-  - [ ] 22.2 实现底部操作栏组件（src/components/ActionBar.tsx）
+  - [x] 22.2 实现底部操作栏组件（src/components/ActionBar.tsx）
     - 显示拍照按钮、模型选择按钮、Prompt 选择按钮
     - 实现按钮点击事件处理
     - 适配不同屏幕尺寸
     - _Requirements: 11.2_
 
 
-- [ ] 23. 对话界面实现
-  - [ ] 23.1 实现对话屏幕（src/screens/ChatScreen.tsx）
+- [x] 23. 对话界面实现
+  - [x] 23.1 实现对话屏幕（src/screens/ChatScreen.tsx）
     - 显示 AI 生成的文本内容
     - 实现消息列表滚动
     - 显示用户拍摄的图像缩略图
@@ -610,13 +610,13 @@
     - 处理错误状态和重试选项
     - _Requirements: 11.3, 11.9, 11.10, 6.6_
 
-  - [ ] 23.2 实现流式文本显示组件（src/components/StreamingText.tsx）
+  - [x] 23.2 实现流式文本显示组件（src/components/StreamingText.tsx）
     - 实时显示流式文本 token
     - 实现打字机效果动画
     - 支持文本滚动
     - _Requirements: 4.3_
 
-  - [ ] 23.3 实现音频播放组件（src/components/AudioPlayer.tsx）
+  - [x] 23.3 实现音频播放组件（src/components/AudioPlayer.tsx）
     - 使用 react-native-sound 或 expo-av
     - 显示语音播放波形动画
     - 实现播放、暂停、重播按钮
