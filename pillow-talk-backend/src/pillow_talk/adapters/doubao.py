@@ -143,12 +143,23 @@ class DoubaoAdapter(MultimodalInterface):
             response = await asyncio.to_thread(_sync_call)
             
             # 解析响应
-            if hasattr(response, 'output') and hasattr(response.output, 'text'):
-                return response.output.text
-            elif hasattr(response, 'choices') and len(response.choices) > 0:
+            # 豆包返回格式: response.output 是一个列表，包含 ResponseOutputMessage
+            if hasattr(response, 'output') and response.output:
+                for item in response.output:
+                    # 找到 message 类型的输出
+                    if hasattr(item, 'type') and item.type == 'message':
+                        if hasattr(item, 'content') and item.content:
+                            # content 也是列表，包含 ResponseOutputText
+                            for content_item in item.content:
+                                if hasattr(content_item, 'type') and content_item.type == 'output_text':
+                                    if hasattr(content_item, 'text'):
+                                        return content_item.text
+            
+            # 备用解析方式
+            if hasattr(response, 'choices') and len(response.choices) > 0:
                 return response.choices[0].message.content
-            else:
-                raise ModelAPIError(f"Unexpected response format: {response}")
+            
+            raise ModelAPIError(f"Unexpected response format: {response}")
                 
         except Exception as e:
             if "timeout" in str(e).lower():
@@ -178,9 +189,17 @@ class DoubaoAdapter(MultimodalInterface):
             stream = await asyncio.to_thread(_sync_stream)
             
             for chunk in stream:
-                if hasattr(chunk, 'output') and hasattr(chunk.output, 'text'):
-                    if chunk.output.text:
-                        yield chunk.output.text
+                # 豆包流式响应格式
+                if hasattr(chunk, 'output') and chunk.output:
+                    for item in chunk.output:
+                        if hasattr(item, 'type') and item.type == 'message':
+                            if hasattr(item, 'content') and item.content:
+                                for content_item in item.content:
+                                    if hasattr(content_item, 'type') and content_item.type == 'output_text':
+                                        if hasattr(content_item, 'text') and content_item.text:
+                                            yield content_item.text
+                
+                # 备用格式
                 elif hasattr(chunk, 'choices') and len(chunk.choices) > 0:
                     delta = chunk.choices[0].delta
                     if hasattr(delta, 'content') and delta.content:
@@ -223,3 +242,8 @@ class DoubaoAdapter(MultimodalInterface):
             
         except Exception:
             return False
+
+    async def close(self):
+        """关闭客户端连接"""
+        # Ark 客户端不需要显式关闭
+        pass

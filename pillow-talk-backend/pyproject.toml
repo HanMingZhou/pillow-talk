@@ -67,7 +67,6 @@ addopts = "--cov=src/pillow_talk --cov-report=html --cov-report=term-missing"
 
 [tool.hypothesis]
 max_examples = 100
-deadline = None
 
 [build-system]
 requires = ["poetry-core"]

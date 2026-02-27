@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pillow Talk - Web 版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 1200px;
+            width: 100%;
+            padding: 40px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .camera-section, .chat-section {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        video, canvas {
+            width: 100%;
+            border-radius: 10px;
+            background: #000;
+            margin-bottom: 15px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #38a169;
+            transform: translateY(-2px);
+        }
+        
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #e53e3e;
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        .chat-messages {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 20px;
+            height: 400px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message.user {
+            background: #667eea;
+            color: white;
+            margin-left: 20%;
+        }
+        
+        .message.assistant {
+            background: white;
+            border: 2px solid #e2e8f0;
+            margin-right: 20%;
+        }
+        
+        .message.system {
+            background: #fed7d7;
+            color: #742a2a;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        textarea {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            resize: none;
+            font-family: inherit;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .settings {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f7fafc;
+            border-radius: 10px;
+        }
+        
+        .settings h3 {
+            margin-bottom: 15px;
+            color: #2d3748;
+        }
+        
+        .setting-item {
+            margin-bottom: 15px;
+        }
+        
+        .setting-item label {
+            display: block;
+            margin-bottom: 5px;
+            color: #4a5568;
+            font-weight: 600;
+        }
+        
+        .setting-item input, .setting-item select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .status {
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .status.success {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .status.error {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+        
+        .status.info {
+            background: #bee3f8;
+            color: #2c5282;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛏️ Pillow Talk</h1>
+        
+        <div id="status" class="status info">后端连接中...</div>
+        
+        <div class="main-content">
+            <div class="camera-section">
+                <h2>📷 摄像头</h2>
+                <video id="video" autoplay playsinline></video>
+                <canvas id="canvas" style="display:none;"></canvas>
+                <div class="controls">
+                    <button id="startCamera" class="btn-primary">启动摄像头</button>
+                    <button id="capturePhoto" class="btn-secondary" disabled>拍照</button>
+                    <button id="stopCamera" class="btn-danger" disabled>停止</button>
+                </div>
+                <img id="capturedImage" style="display:none; width:100%; border-radius:10px; margin-top:15px;">
+            </div>
+            
+            <div class="chat-section">
+                <h2>💬 对话</h2>
+                <div id="chatMessages" class="chat-messages">
+                    <div class="message system">欢迎使用 Pillow Talk！先启动摄像头，拍照后输入问题。</div>
+                </div>
+                <div class="input-group">
+                    <textarea id="userInput" placeholder="输入你的问题..." rows="3"></textarea>
+                    <button id="sendMessage" class="btn-primary">发送</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="settings">
+            <h3>⚙️ 设置</h3>
+            <div class="setting-item">
+                <label>后端地址</label>
+                <input type="text" id="apiUrl" value="http://localhost:8000">
+            </div>
+            <div class="setting-item">
+                <label>模型提供商</label>
+                <select id="provider">
+                    <option value="doubao">豆包 (Doubao)</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="gemini">Google Gemini</option>
+                    <option value="qwen">千问 (Qwen)</option>
+                    <option value="glm">智谱 GLM</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <label>系统提示词</label>
+                <input type="text" id="systemPrompt" value="你是一个友好的助手">
+            </div>
+            <div class="setting-item">
+                <label>
+                    <input type="checkbox" id="enableTTS" style="width:auto;margin-right:5px;">
+                    启用语音播报
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let stream = null;
+        let capturedImageData = null;
+        
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const capturedImage = document.getElementById('capturedImage');
+        const startCameraBtn = document.getElementById('startCamera');
+        const capturePhotoBtn = document.getElementById('capturePhoto');
+        const stopCameraBtn = document.getElementById('stopCamera');
+        const sendMessageBtn = document.getElementById('sendMessage');
+        const userInput = document.getElementById('userInput');
+        const chatMessages = document.getElementById('chatMessages');
+        const statusDiv = document.getElementById('status');
+        const apiUrlInput = document.getElementById('apiUrl');
+        const providerSelect = document.getElementById('provider');
+        const systemPromptInput = document.getElementById('systemPrompt');
+        const enableTTSCheckbox = document.getElementById('enableTTS');
+        
+        // 语音合成
+        function speakText(text) {
+            if (!enableTTSCheckbox.checked) return;
+            
+            // 使用浏览器内置的语音合成
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'zh-CN';
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            speechSynthesis.speak(utterance);
+        }
+        
+        // 检查后端连接
+        async function checkBackend() {
+            try {
+                const response = await fetch(`${apiUrlInput.value}/health`);
+                const data = await response.json();
+                if (data.status === 'healthy') {
+                    showStatus('后端连接成功 ✓', 'success');
+                    return true;
+                }
+            } catch (error) {
+                showStatus('后端连接失败，请确保后端正在运行', 'error');
+                return false;
+            }
+        }
+        
+        function showStatus(message, type) {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+        
+        function addMessage(text, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = text;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // 启动摄像头
+        startCameraBtn.addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { width: 1280, height: 720 } 
+                });
+                video.srcObject = stream;
+                startCameraBtn.disabled = true;
+                capturePhotoBtn.disabled = false;
+                stopCameraBtn.disabled = false;
+                showStatus('摄像头已启动', 'success');
+            } catch (error) {
+                showStatus('无法访问摄像头: ' + error.message, 'error');
+            }
+        });
+        
+        // 拍照
+        capturePhotoBtn.addEventListener('click', () => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            
+            capturedImageData = canvas.toDataURL('image/jpeg', 0.8);
+            capturedImage.src = capturedImageData;
+            capturedImage.style.display = 'block';
+            
+            showStatus('照片已拍摄，现在可以提问了', 'success');
+            addMessage('📸 已拍摄照片', 'system');
+        });
+        
+        // 停止摄像头
+        stopCameraBtn.addEventListener('click', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+                startCameraBtn.disabled = false;
+                capturePhotoBtn.disabled = true;
+                stopCameraBtn.disabled = true;
+                showStatus('摄像头已停止', 'info');
+            }
+        });
+        
+        // 发送消息
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (!message) {
+                showStatus('请输入问题', 'error');
+                return;
+            }
+            
+            if (!capturedImageData) {
+                showStatus('请先拍照', 'error');
+                return;
+            }
+            
+            addMessage(message, 'user');
+            userInput.value = '';
+            sendMessageBtn.disabled = true;
+            showStatus('正在思考...', 'info');
+            
+            try {
+                const response = await fetch(`${apiUrlInput.value}/api/v1/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        image_base64: capturedImageData,
+                        system_prompt: systemPromptInput.value,
+                        provider: providerSelect.value,
+                        stream: false,
+                        user_message: message
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || '请求失败');
+                }
+                
+                const data = await response.json();
+                // 后端返回格式: {code: 0, message: "success", data: {text: "..."}}
+                const responseText = data.data?.text || data.response || data.message || '无响应';
+                addMessage(responseText, 'assistant');
+                speakText(responseText); // 播放语音
+                showStatus('回复完成', 'success');
+            } catch (error) {
+                addMessage('错误: ' + error.message, 'system');
+                showStatus('发送失败: ' + error.message, 'error');
+            } finally {
+                sendMessageBtn.disabled = false;
+            }
+        }
+        
+        sendMessageBtn.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        // 初始化
+        checkBackend();
+        setInterval(checkBackend, 30000); // 每30秒检查一次后端
+    </script>
+</body>
+</html>

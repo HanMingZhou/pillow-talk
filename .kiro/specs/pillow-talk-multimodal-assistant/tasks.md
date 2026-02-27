@@ -146,12 +146,16 @@
     - 设置 30 秒超时
     - _Requirements: 2.1, 4.1, 4.2, 4.3, 8.2, 8.7, 12.4, 12.6_
 
-  - [ ] 6.3 实现 Gemini 适配器（src/pillow_talk/adapters/gemini.py）
+  - [x] 6.3 实现 Gemini 适配器（src/pillow_talk/adapters/gemini.py）
+
+
     - 实现 GeminiAdapter 类，继承 MultimodalInterface
     - 适配 Google Gemini API 格式
     - 实现流式和非流式响应处理
     - 实现 test_connection 方法
     - _Requirements: 2.1, 4.1, 8.2, 8.6, 8.7_
+
+
 
   - [ ] 6.4 实现 Claude 适配器（src/pillow_talk/adapters/claude.py）
     - 实现 ClaudeAdapter 类，继承 MultimodalInterface
@@ -164,6 +168,9 @@
     - 实现 DoubaoAdapter 类，继承 MultimodalInterface
     - 适配字节豆包 API 格式
     - 实现流式和非流式响应处理
+
+
+
     - 实现 test_connection 方法
     - _Requirements: 2.1, 4.1, 8.2, 8.6, 8.7_
 
@@ -190,11 +197,14 @@
 
 
 - [ ] 7. TTS 服务层实现
-  - [ ] 7.1 实现 TTS 服务基类（src/pillow_talk/tts/base.py）
+  - [x] 7.1 实现 TTS 服务基类（src/pillow_talk/tts/base.py）
+
     - 定义 TTSInterface 抽象基类
     - 定义 synthesize 抽象方法：接受文本、语音类型、语速、语言，返回音频数据
     - 添加类型注解和文档字符串
     - _Requirements: 5.2_
+
+
 
   - [ ] 7.2 实现 OpenAI TTS 服务（src/pillow_talk/tts/openai_tts.py）
     - 实现 OpenAITTSService 类，继承 TTSInterface
@@ -203,22 +213,32 @@
     - 支持语速调整（0.5x - 2.0x）
     - 返回 MP3 格式音频
     - 设置 10 秒超时
+
+
     - _Requirements: 5.1, 5.2, 5.3, 5.5, 5.6, 5.10_
 
   - [ ] 7.3 实现 Google TTS 服务（src/pillow_talk/tts/google_tts.py）
     - 实现 GoogleTTSService 类，继承 TTSInterface
+
+
     - 适配 Google Cloud TTS API
     - 支持中文和英文语音合成
     - _Requirements: 5.1, 5.9_
+
+
 
   - [ ] 7.4 实现 Azure TTS 服务（src/pillow_talk/tts/azure_tts.py）
     - 实现 AzureTTSService 类，继承 TTSInterface
     - 适配 Microsoft Azure TTS API
     - 支持中文和英文语音合成
+
+
     - _Requirements: 5.1, 5.9_
 
   - [ ] 7.5 实现 Edge TTS 服务（src/pillow_talk/tts/edge_tts.py）
     - 实现 EdgeTTSService 类，继承 TTSInterface
+
+
     - 适配 Edge TTS API
     - 支持中文和英文语音合成
     - _Requirements: 5.1, 5.9_
@@ -237,10 +257,14 @@
 
   - [ ]* 7.8 编写 TTS 服务单元测试
     - 测试各 TTS 服务的音频生成
+
+
     - 测试语音类型和语速参数
     - 测试错误处理
     - 测试工厂模式的服务创建
     - _Requirements: 5.2, 5.3, 5.5, 5.6_
+
+
 
 - [ ] 8. Checkpoint - 适配层验证
   - 运行所有适配器和 TTS 服务的单元测试
@@ -356,6 +380,8 @@
     - 添加 make install 命令：安装依赖
     - 添加 make test 命令：运行测试
     - 添加 make lint 命令：运行 ruff 检查
+
+
     - 添加 make format 命令：运行 ruff 格式化
     - 添加 make type-check 命令：运行 mypy 类型检查
     - 添加 make run 命令：启动开发服务器
@@ -608,11 +634,15 @@
     - 实现"继续对话"和"新对话"按钮
     - 显示加载指示器
     - 处理错误状态和重试选项
+
+
     - _Requirements: 11.3, 11.9, 11.10, 6.6_
 
   - [x] 23.2 实现流式文本显示组件（src/components/StreamingText.tsx）
     - 实时显示流式文本 token
     - 实现打字机效果动画
+
+
     - 支持文本滚动
     - _Requirements: 4.3_
 
@@ -621,6 +651,9 @@
     - 显示语音播放波形动画
     - 实现播放、暂停、重播按钮
     - 在 100 毫秒内响应暂停操作
+
+
+
     - 显示播放进度
     - 支持语速调整（0.5x - 2.0x）
     - _Requirements: 5.5, 5.6, 5.7, 5.8, 11.4_
@@ -640,11 +673,15 @@
     - 提供"添加自定义模型"入口
     - _Requirements: 2.1, 2.2, 11.2_
 
+
+
   - [ ] 24.2 实现模型配置表单（src/components/ModelConfigForm.tsx）
     - 输入字段：Base URL、API Key、Model Name
     - 支持自定义 HTTP Header
     - 实现表单验证
     - 实现"测试连接"按钮
+
+
     - 在 10 秒内返回测试结果
     - 显示连接成功或失败消息
     - 显示具体错误信息和建议
@@ -660,6 +697,8 @@
   - [ ]* 24.4 编写模型配置界面单元测试
     - 测试表单验证
     - 测试连接测试功能
+
+
     - 测试配置保存
     - _Requirements: 2.3, 2.4, 2.5, 2.6_
 
@@ -667,6 +706,8 @@
 - [ ] 25. Checkpoint - UI 组件验证
   - 运行所有 UI 组件的单元测试
   - 在 iOS 和 Android 模拟器上测试界面显示
+
+
   - 确保摄像头、对话界面、配置界面功能正常
   - 如有问题，请向用户反馈
 
@@ -679,7 +720,9 @@
     - 提供"创建自定义 Prompt"入口
     - _Requirements: 3.1, 3.4, 3.5_
 
-  - [ ] 26.2 实现 Prompt 编辑器（src/screens/PromptEditorScreen.tsx）
+
+  - [x] 26.2 实现 Prompt 编辑器（src/screens/PromptEditorScreen.tsx）
+
     - 提供文本编辑界面
     - 支持最多 2000 个字符
     - 显示字符计数
@@ -687,6 +730,7 @@
     - 验证 Prompt 内容
     - 本地持久化存储
     - _Requirements: 3.2, 3.3, 3.7_
+
 
   - [ ]* 26.3 编写 Prompt 管理单元测试
     - 测试 Prompt 切换功能
@@ -703,11 +747,16 @@
     - 实现点击查看详情功能
     - 实现删除单条记录功能
     - 实现清空所有历史记录功能
+
+
     - _Requirements: 11.5, 11.6_
 
   - [ ] 27.2 实现历史详情组件（src/components/HistoryDetail.tsx）
     - 显示完整的对话内容
     - 显示原始图像
+
+
+
     - 显示使用的模型和 Prompt
     - 支持重播音频
     - 提供"继续对话"选项
@@ -723,14 +772,20 @@
   - [ ] 28.1 实现全局状态管理（src/store/index.ts）
     - 使用 React Context 或 Redux/Zustand
     - 定义全局状态：currentModel、currentPrompt、conversationId、isLoading、error
+
+
+
     - 实现状态更新 actions
     - 实现状态持久化（AsyncStorage）
     - _Requirements: 2.2, 3.4, 6.1_
 
 
+
+
   - [ ] 28.2 实现自定义 Hooks（src/hooks/）
     - 实现 useCamera Hook：管理摄像头状态和权限
     - 实现 useChat Hook：管理对话状态和 API 调用
+
     - 实现 useAudioPlayer Hook：管理音频播放状态
     - 实现 useConfig Hook：管理配置状态
     - 实现 useHistory Hook：管理历史记录状态
@@ -771,20 +826,22 @@
   - 测试错误场景和边界情况
   - 如有问题，请向用户反馈
 
-- [ ] 31. 性能优化
-  - [ ] 31.1 实现图像缓存（src/utils/imageCache.ts）
+- [x] 31. 性能优化
+  - [x] 31.1 实现图像缓存（src/utils/imageCache.ts）
     - 缓存最近拍摄的图像（最多 10 张）
     - 实现 LRU 缓存策略
     - 自动清理过期缓存
     - _Requirements: 12.8_
 
-  - [ ] 31.2 实现音频缓存（src/utils/audioCache.ts）
+  - [x] 31.2 实现音频缓存（src/utils/audioCache.ts）
     - 缓存最近播放的音频文件（最多 10 个）
     - 实现 LRU 缓存策略
     - 自动清理过期缓存
     - _Requirements: 12.8_
 
   - [ ] 31.3 优化列表渲染性能
+
+
     - 使用 FlatList 的 virtualization 功能
     - 实现 memo 和 useMemo 优化组件渲染
     - 优化图像加载和显示
@@ -798,11 +855,18 @@
     - 使用 React Native Performance Monitor 监控性能
     - _Requirements: 1.5, 3.5, 5.7, 12.3_
 
-- [ ] 32. 安全性实现
+- [x] 32. 安全性实现
+
+
+
+
+
   - [ ] 32.1 实现 API Key 安全存储（src/utils/secureStorage.ts）
     - 使用 react-native-keychain 或 expo-secure-store
     - 实现 saveApiKey 和 getApiKey 方法
     - 使用设备加密存储（AES-256）
+
+
     - _Requirements: 2.8, 9.2_
 
   - [ ] 32.2 实现 HTTPS 通信验证
@@ -810,6 +874,11 @@
     - 实现证书固定（可选）
     - 验证所有 API 请求使用 HTTPS
     - _Requirements: 7.8, 9.1_
+
+
+
+
+
 
   - [ ]* 32.3 安全性测试
     - 测试 API Key 加密存储
@@ -857,6 +926,7 @@
   - 在真实 iOS 设备上测试（iOS 15.0+）
   - 在真实 Android 设备上测试（Android 10.0+）
   - 测试不同屏幕尺寸和分辨率
+
   - 测试刘海屏和灵动岛适配
   - 测试所有功能的完整性
   - 验证性能指标
@@ -878,6 +948,9 @@
     - 配置 Bundle Identifier
     - 配置签名和证书
     - _Requirements: 11.7_
+
+
+
 
   - [ ] 36.3 配置 Android 构建
     - 配置 AndroidManifest.xml 权限

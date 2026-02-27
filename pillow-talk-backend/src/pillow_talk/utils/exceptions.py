@@ -65,6 +65,28 @@ class TTSServiceError(PillowTalkException):
         )
 
 
+class TTSGenerationError(PillowTalkException):
+    """TTS 生成错误"""
+    
+    def __init__(self, message: str = "语音生成失败"):
+        super().__init__(
+            message=message,
+            error_code=3002,
+            suggestion="语音生成失败，请检查输入文本和配置"
+        )
+
+
+class TTSProviderUnavailableError(PillowTalkException):
+    """TTS 提供商不可用错误"""
+    
+    def __init__(self, message: str = "TTS 提供商不可用"):
+        super().__init__(
+            message=message,
+            error_code=3003,
+            suggestion="TTS 提供商不可用，请检查服务状态"
+        )
+
+
 class RateLimitError(PillowTalkException):
     """限流错误"""
     

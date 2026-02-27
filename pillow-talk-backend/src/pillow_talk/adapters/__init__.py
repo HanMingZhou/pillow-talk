@@ -9,6 +9,8 @@ from .doubao import DoubaoAdapter
 from .qwen import QwenAdapter
 from .glm import GLMAdapter
 from .gemini import GeminiAdapter
+from .claude import ClaudeAdapter
+from .custom import CustomAdapter
 from ..utils.exceptions import ConfigurationError
 
 
@@ -25,6 +27,8 @@ class ModelAdapterFactory:
         "qwen": QwenAdapter,
         "glm": GLMAdapter,
         "gemini": GeminiAdapter,
+        "claude": ClaudeAdapter,
+        "custom": CustomAdapter,
     }
     
     @classmethod
@@ -91,5 +95,7 @@ __all__ = [
     "QwenAdapter",
     "GLMAdapter",
     "GeminiAdapter",
+    "ClaudeAdapter",
+    "CustomAdapter",
     "ModelAdapterFactory",
 ]

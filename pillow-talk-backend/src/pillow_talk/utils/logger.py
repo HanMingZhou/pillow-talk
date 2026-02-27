@@ -3,6 +3,7 @@
 使用 structlog 实现结构化日志记录
 """
 import sys
+import logging
 import structlog
 from typing import Any
 
@@ -30,12 +31,13 @@ def setup_logger(log_level: str = "INFO", log_format: str = "json") -> structlog
     else:
         processors.append(structlog.dev.ConsoleRenderer())
     
+    # 获取日志级别
+    level = getattr(logging, log_level.upper(), logging.INFO)
+    
     # 配置 structlog
     structlog.configure(
         processors=processors,
-        wrapper_class=structlog.make_filtering_bound_logger(
-            getattr(structlog.stdlib, log_level.upper(), structlog.stdlib.INFO)
-        ),
+        wrapper_class=structlog.make_filtering_bound_logger(level),
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(file=sys.stdout),
         cache_logger_on_first_use=True,
