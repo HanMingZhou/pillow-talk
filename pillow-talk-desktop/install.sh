@@ -2,109 +2,64 @@
 
 # Pillow Talk Desktop 安装脚本
 
-echo "🛏️ Pillow Talk Desktop 安装脚本"
-echo "================================"
+set -e  # 遇到错误立即退出
+
+echo "🛏️  Pillow Talk Desktop 安装"
+echo "=============================="
 echo ""
 
-# 检查 Node.js
+# 1. 检查依赖
+echo "1️⃣  检查系统依赖..."
+
 if ! command -v node &> /dev/null; then
-    echo "❌ 错误: 未找到 Node.js"
-    echo "请先安装 Node.js: https://nodejs.org/"
+    echo "❌ 未找到 Node.js，请先安装: https://nodejs.org/"
     exit 1
 fi
+echo "   ✓ Node.js $(node --version)"
 
-echo "✓ Node.js 版本: $(node --version)"
-
-# 检查 npm
-if ! command -v npm &> /dev/null; then
-    echo "❌ 错误: 未找到 npm"
-    exit 1
-fi
-
-echo "✓ npm 版本: $(npm --version)"
-
-# 检查 Python
 if ! command -v python3 &> /dev/null; then
-    echo "❌ 错误: 未找到 Python 3"
-    echo "请先安装 Python 3.10+: https://www.python.org/"
+    echo "❌ 未找到 Python 3，请先安装: https://www.python.org/"
     exit 1
 fi
+echo "   ✓ Python $(python3 --version)"
 
-echo "✓ Python 版本: $(python3 --version)"
-
-# 安装 Node.js 依赖
+# 2. 安装前端依赖
 echo ""
-echo "📦 安装 Node.js 依赖..."
+echo "2️⃣  安装前端依赖..."
 npm install
+echo "   ✓ 前端依赖安装完成"
 
-if [ $? -ne 0 ]; then
-    echo "❌ Node.js 依赖安装失败"
-    exit 1
-fi
-
-echo "✓ Node.js 依赖安装完成"
-
-# 检查后端虚拟环境
+# 3. 设置后端环境
 echo ""
-echo "🔍 检查后端环境..."
+echo "3️⃣  设置后端环境..."
 
 BACKEND_DIR="../pillow-talk-backend"
-VENV_DIR="$BACKEND_DIR/venv"
 
-if [ ! -d "$VENV_DIR" ]; then
-    echo "⚠️  后端虚拟环境不存在"
-    echo "正在创建虚拟环境..."
-    
-    cd "$BACKEND_DIR"
-    python3 -m venv venv
-    
-    if [ $? -ne 0 ]; then
-        echo "❌ 虚拟环境创建失败"
-        exit 1
-    fi
-    
-    echo "✓ 虚拟环境创建完成"
-    
-    echo "正在安装后端依赖..."
-    source venv/bin/activate
-    pip install -r requirements.txt --trusted-host pypi.org --trusted-host files.pythonhosted.org
-    
-    if [ $? -ne 0 ]; then
-        echo "❌ 后端依赖安装失败"
-        exit 1
-    fi
-    
-    echo "✓ 后端依赖安装完成"
-    deactivate
-    cd -
+if [ ! -d "$BACKEND_DIR/venv" ]; then
+    echo "   创建虚拟环境..."
+    (cd "$BACKEND_DIR" && python3 -m venv venv)
+    echo "   安装后端依赖..."
+    (cd "$BACKEND_DIR" && source venv/bin/activate && pip install -r requirements.txt --trusted-host pypi.org --trusted-host files.pythonhosted.org)
+    echo "   ✓ 后端环境创建完成"
 else
-    echo "✓ 后端虚拟环境已存在"
+    echo "   ✓ 后端环境已存在"
 fi
 
-# 检查 .env 文件
 if [ ! -f "$BACKEND_DIR/.env" ]; then
-    echo "⚠️  后端 .env 文件不存在"
     if [ -f "$BACKEND_DIR/.env.example" ]; then
-        echo "正在从 .env.example 创建 .env..."
         cp "$BACKEND_DIR/.env.example" "$BACKEND_DIR/.env"
-        echo "✓ .env 文件已创建，请编辑配置 API Keys"
-    else
-        echo "❌ 未找到 .env.example 文件"
+        echo "   ⚠️  已创建 .env 文件，请编辑配置 API Keys"
     fi
 else
-    echo "✓ 后端 .env 文件已存在"
+    echo "   ✓ 后端配置文件已存在"
 fi
 
+# 完成
 echo ""
-echo "================================"
+echo "=============================="
 echo "✅ 安装完成！"
 echo ""
-echo "使用方法："
-echo "  开发模式: npm start"
-echo "  构建应用: npm run build:mac"
-echo ""
-echo "注意事项："
-echo "  1. 请确保在 $BACKEND_DIR/.env 中配置了 API Keys"
-echo "  2. 首次运行可能需要授权摄像头访问权限"
-echo "  3. 应用会自动启动后端服务"
+echo "快速开始："
+echo "  npm start          # 启动应用"
+echo "  npm run build:mac  # 构建 .dmg 安装包"
 echo ""

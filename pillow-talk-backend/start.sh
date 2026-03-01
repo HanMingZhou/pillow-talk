@@ -12,18 +12,21 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
-# 检查 Poetry
-if ! command -v poetry &> /dev/null; then
-    echo "❌ Poetry not found. Please install Poetry first:"
-    echo "   curl -sSL https://install.python-poetry.org | python3 -"
+# 检查虚拟环境
+if [ ! -d "venv" ]; then
+    echo "❌ Virtual environment not found at ./venv"
+    echo "Please create it first:"
+    echo "   python3 -m venv venv"
+    echo "   source venv/bin/activate"
+    echo "   pip install -r requirements.txt"
     exit 1
 fi
 
-# 安装依赖
-echo "📦 Installing dependencies..."
-poetry install
+# 激活虚拟环境
+echo "📦 Activating virtual environment..."
+source venv/bin/activate
 
 # 运行服务
 echo "🎉 Starting server on http://localhost:8000"
 echo "📚 API docs available at http://localhost:8000/docs"
-poetry run uvicorn pillow_talk.main:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn src.pillow_talk.main:app --reload --host 0.0.0.0 --port 8000
