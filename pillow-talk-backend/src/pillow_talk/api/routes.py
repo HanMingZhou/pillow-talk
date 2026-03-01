@@ -390,14 +390,16 @@ async def _stream_chat_response(
         
         async for chunk in adapter.process_image_streaming(messages):
             full_response += chunk
-            # 发送 SSE 格式数据
-            yield f"data: {chunk}\n\n"
+            # 发送 SSE 格式数据（JSON）
+            import json
+            yield f"data: {json.dumps({'text': chunk})}\n\n"
         
         # 保存完整对话
         conversation_manager.add_message(conversation_id, "user", "Image uploaded")
         conversation_manager.add_message(conversation_id, "assistant", full_response)
         
-        # 发送结束标记
+        # 发送对话 ID 和结束标记
+        yield f"data: {json.dumps({'conversation_id': conversation_id})}\n\n"
         yield "data: [DONE]\n\n"
         
         logger.info(
@@ -438,10 +440,15 @@ def _build_adapter_config(provider: str, custom_config=None) -> dict:
                 status_code=400,
                 detail="OpenAI API Key not configured"
             )
-        return {
+        config = {
             "api_key": settings.openai_api_key,
             "timeout": settings.model_timeout
         }
+        if settings.openai_model:
+            config["model"] = settings.openai_model
+        if settings.openai_base_url:
+            config["base_url"] = settings.openai_base_url
+        return config
     
     elif provider == "doubao":
         if not settings.doubao_api_key:
@@ -449,21 +456,30 @@ def _build_adapter_config(provider: str, custom_config=None) -> dict:
                 status_code=400,
                 detail="Doubao API Key not configured"
             )
-        return {
+        config = {
             "api_key": settings.doubao_api_key,
             "timeout": settings.model_timeout
         }
+        if settings.doubao_model:
+            config["model"] = settings.doubao_model
+        if settings.doubao_base_url:
+            config["base_url"] = settings.doubao_base_url
+        return config
     
     elif provider == "qwen":
-        if not settings.google_api_key:  # 临时使用
+        api_key = settings.qwen_api_key or settings.google_api_key
+        if not api_key:
             raise HTTPException(
                 status_code=400,
                 detail="Qwen API Key not configured"
             )
-        return {
-            "api_key": settings.google_api_key,
+        config = {
+            "api_key": api_key,
             "timeout": settings.model_timeout
         }
+        if settings.qwen_model:
+            config["model"] = settings.qwen_model
+        return config
     
     elif provider == "glm":
         if not settings.glm_api_key:
@@ -471,10 +487,13 @@ def _build_adapter_config(provider: str, custom_config=None) -> dict:
                 status_code=400,
                 detail="GLM API Key not configured"
             )
-        return {
+        config = {
             "api_key": settings.glm_api_key,
             "timeout": settings.model_timeout
         }
+        if settings.glm_model:
+            config["model"] = settings.glm_model
+        return config
     
     elif provider == "gemini":
         if not settings.gemini_api_key:
@@ -482,10 +501,27 @@ def _build_adapter_config(provider: str, custom_config=None) -> dict:
                 status_code=400,
                 detail="Gemini API Key not configured"
             )
-        return {
+        config = {
             "api_key": settings.gemini_api_key,
             "timeout": settings.model_timeout
         }
+        if settings.gemini_model:
+            config["model"] = settings.gemini_model
+        return config
+    
+    elif provider == "claude":
+        if not settings.anthropic_api_key:
+            raise HTTPException(
+                status_code=400,
+                detail="Claude API Key not configured"
+            )
+        config = {
+            "api_key": settings.anthropic_api_key,
+            "timeout": settings.model_timeout
+        }
+        if settings.claude_model:
+            config["model"] = settings.claude_model
+        return config
     
     elif provider == "custom":
         if not custom_config:

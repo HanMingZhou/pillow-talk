@@ -75,6 +75,63 @@ class GeminiAdapter(MultimodalInterface):
         else:
             return await self._complete_response(contents)
     
+    async def process_image_streaming(
+        self,
+        messages: list
+    ) -> AsyncIterator[str]:
+        """流式处理（用于路由直接调用）
+        
+        从标准消息格式中提取图像和提示词，然后调用流式响应
+        """
+        # 从 messages 中提取图像和提示词
+        image_base64 = None
+        prompt_parts = []
+        
+        for msg in messages:
+            if isinstance(msg, dict):
+                role = msg.get("role")
+                content = msg.get("content")
+                
+                # 处理系统消息
+                if role == "system" and isinstance(content, str):
+                    prompt_parts.append(content)
+                
+                # 处理用户消息
+                elif role == "user":
+                    if isinstance(content, str):
+                        prompt_parts.append(content)
+                    elif isinstance(content, list):
+                        for item in content:
+                            if isinstance(item, dict):
+                                if item.get("type") == "image_url":
+                                    image_url = item.get("image_url", {})
+                                    if isinstance(image_url, dict):
+                                        url = image_url.get("url", "")
+                                    else:
+                                        url = image_url
+                                    
+                                    # 提取 base64 数据
+                                    if "base64," in url:
+                                        image_base64 = url.split("base64,")[1]
+                                    else:
+                                        image_base64 = url
+                                elif item.get("type") == "text":
+                                    prompt_parts.append(item.get("text", ""))
+        
+        if not image_base64:
+            raise ModelAPIError("No image found in messages")
+        
+        if not prompt_parts:
+            raise ModelAPIError("No prompt found in messages")
+        
+        # 合并所有提示词部分
+        prompt = "\n\n".join(prompt_parts)
+        
+        # 构建 Gemini 格式的内容并流式输出
+        contents = self._build_gemini_contents(image_base64, prompt, None)
+        async for chunk in self._stream_response(contents):
+            yield chunk
+    
     def _build_gemini_contents(
         self,
         image_base64: str,
@@ -83,47 +140,25 @@ class GeminiAdapter(MultimodalInterface):
     ) -> List:
         """构建 Gemini 格式的内容
         
-        Gemini 使用 Part 对象来表示内容
+        Gemini 使用简单的列表格式，包含 Part 对象和文本
         """
-        contents = []
-        
-        # 添加对话历史
-        if conversation_history:
-            for msg in conversation_history:
-                if msg.role == "system":
-                    # Gemini 不直接支持 system role，将其作为 user 消息
-                    contents.append({
-                        "role": "user",
-                        "parts": [{"text": f"System: {msg.content}"}]
-                    })
-                elif msg.role == "user":
-                    contents.append({
-                        "role": "user",
-                        "parts": [{"text": msg.content}]
-                    })
-                elif msg.role == "assistant":
-                    contents.append({
-                        "role": "model",  # Gemini 使用 "model" 而不是 "assistant"
-                        "parts": [{"text": msg.content}]
-                    })
-        
-        # 添加当前请求（图像 + 提示词）
         # 解码 base64 图像数据
         try:
+            # 移除可能的 data URL 前缀
+            if image_base64.startswith('data:image'):
+                image_base64 = image_base64.split(',', 1)[1]
             image_bytes = base64.b64decode(image_base64)
         except Exception as e:
             raise ModelAPIError(f"Failed to decode base64 image: {e}")
         
-        # 构建当前消息的 parts
-        current_parts = [
+        # 构建内容列表（按照官方示例格式）
+        contents = [
             types.Part.from_bytes(
                 data=image_bytes,
                 mime_type='image/jpeg'
             ),
             prompt
         ]
-        
-        contents.append(current_parts)
         
         return contents
     
@@ -167,28 +202,19 @@ class GeminiAdapter(MultimodalInterface):
         """流式响应处理"""
         try:
             def _sync_stream():
-                stream = self.client.models.generate_content(
+                # 使用流式生成
+                return self.client.models.generate_content_stream(
                     model=self.model,
-                    contents=contents,
-                    config=types.GenerateContentConfig(
-                        response_modalities=["TEXT"]
-                    )
+                    contents=contents
                 )
-                return stream
             
-            # 注意：Gemini SDK 的流式支持可能需要特殊处理
-            # 这里提供基本实现，可能需要根据实际 SDK 行为调整
-            response = await asyncio.to_thread(_sync_stream)
+            # 在线程中执行同步流式调用
+            stream = await asyncio.to_thread(_sync_stream)
             
-            # 如果响应支持迭代
-            if hasattr(response, '__iter__'):
-                for chunk in response:
-                    if hasattr(chunk, 'text') and chunk.text:
-                        yield chunk.text
-            else:
-                # 如果不支持流式，返回完整响应
-                if hasattr(response, 'text'):
-                    yield response.text
+            # 迭代流式响应
+            for chunk in stream:
+                if hasattr(chunk, 'text') and chunk.text:
+                    yield chunk.text
                         
         except Exception as e:
             if "timeout" in str(e).lower():
@@ -197,7 +223,7 @@ class GeminiAdapter(MultimodalInterface):
                 raise ModelConnectionError("Failed to connect to Gemini API")
             elif isinstance(e, (ModelAPIError, ModelTimeoutError, ModelConnectionError)):
                 raise
-            raise ModelAPIError(f"Gemini API error: {str(e)}")
+            raise ModelAPIError(f"Gemini API streaming error: {str(e)}")
     
     async def test_connection(self) -> bool:
         """测试连接
@@ -217,3 +243,7 @@ class GeminiAdapter(MultimodalInterface):
             
         except Exception:
             return False
+    
+    async def close(self) -> None:
+        """关闭客户端"""
+        pass  # Gemini SDK 不需要显式关闭

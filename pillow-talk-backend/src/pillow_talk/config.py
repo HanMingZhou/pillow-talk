@@ -98,11 +98,26 @@ class Settings(BaseSettings):
     
     # 可选的 API Keys
     openai_api_key: str | None = Field(default=None, description="OpenAI API Key")
+    openai_model: str | None = Field(default=None, description="OpenAI 模型名称")
+    openai_base_url: str | None = Field(default=None, description="OpenAI Base URL")
+    
     google_api_key: str | None = Field(default=None, description="Google API Key")
-    gemini_api_key: str | None = Field(default=None, description="Gemini API Key")
+    gemini_model: str | None = Field(default=None, description="Gemini 模型名称")
+    
     anthropic_api_key: str | None = Field(default=None, description="Anthropic API Key")
+    claude_model: str | None = Field(default=None, description="Claude 模型名称")
+    
     doubao_api_key: str | None = Field(default=None, description="豆包 API Key")
+    doubao_model: str | None = Field(default=None, description="豆包模型名称")
+    doubao_base_url: str | None = Field(default=None, description="豆包 Base URL")
+    
     glm_api_key: str | None = Field(default=None, description="智谱 GLM API Key")
+    glm_model: str | None = Field(default=None, description="GLM 模型名称")
+    
+    gemini_api_key: str | None = Field(default=None, description="Gemini API Key")
+    
+    qwen_api_key: str | None = Field(default=None, description="千问 API Key")
+    qwen_model: str | None = Field(default=None, description="千问模型名称")
     
     model_config = SettingsConfigDict(
         env_file=".env",

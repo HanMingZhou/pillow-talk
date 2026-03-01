@@ -79,6 +79,14 @@ class DoubaoAdapter(MultimodalInterface):
         else:
             return await self._complete_response(messages)
     
+    async def process_image_streaming(
+        self,
+        messages: list
+    ) -> AsyncIterator[str]:
+        """流式处理（用于路由直接调用）"""
+        async for chunk in self._stream_response(messages):
+            yield chunk
+    
     def _build_doubao_messages(
         self,
         image_base64: str,
@@ -87,9 +95,10 @@ class DoubaoAdapter(MultimodalInterface):
     ) -> List[dict]:
         """构建豆包格式的消息
         
-        豆包使用特殊的消息格式：
-        - input_image: 图像 URL 或 base64
-        - input_text: 文本内容
+        豆包使用标准的 OpenAI 格式：
+        - type: "image_url" 或 "text"
+        - image_url: {"url": "data:image/jpeg;base64,..."}
+        - text: 文本内容
         """
         messages = []
         
@@ -99,22 +108,19 @@ class DoubaoAdapter(MultimodalInterface):
                 if msg.role != "system":
                     messages.append({
                         "role": msg.role,
-                        "content": [
-                            {
-                                "type": "input_text",
-                                "text": msg.content
-                            }
-                        ]
+                        "content": msg.content
                     })
         
         # 添加当前请求（图像 + 提示词）
         content = [
             {
-                "type": "input_image",
-                "image_url": f"data:image/jpeg;base64,{image_base64}"
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/jpeg;base64,{image_base64}"
+                }
             },
             {
-                "type": "input_text",
+                "type": "text",
                 "text": prompt
             }
         ]
@@ -129,33 +135,19 @@ class DoubaoAdapter(MultimodalInterface):
     async def _complete_response(self, messages: list) -> str:
         """获取完整响应"""
         try:
-            # 豆包 SDK 使用同步调用
-            # 在实际异步环境中，应该使用 asyncio.to_thread 包装
             import asyncio
             
             def _sync_call():
-                response = self.client.responses.create(
+                response = self.client.chat.completions.create(
                     model=self.model,
-                    input=messages
+                    messages=messages,
+                    thinking={"type": "disabled"}  # 禁用深度思考模式
                 )
                 return response
             
             response = await asyncio.to_thread(_sync_call)
             
-            # 解析响应
-            # 豆包返回格式: response.output 是一个列表，包含 ResponseOutputMessage
-            if hasattr(response, 'output') and response.output:
-                for item in response.output:
-                    # 找到 message 类型的输出
-                    if hasattr(item, 'type') and item.type == 'message':
-                        if hasattr(item, 'content') and item.content:
-                            # content 也是列表，包含 ResponseOutputText
-                            for content_item in item.content:
-                                if hasattr(content_item, 'type') and content_item.type == 'output_text':
-                                    if hasattr(content_item, 'text'):
-                                        return content_item.text
-            
-            # 备用解析方式
+            # 标准 OpenAI 格式响应
             if hasattr(response, 'choices') and len(response.choices) > 0:
                 return response.choices[0].message.content
             
@@ -171,39 +163,26 @@ class DoubaoAdapter(MultimodalInterface):
             raise ModelAPIError(f"Doubao API error: {str(e)}")
     
     async def _stream_response(self, messages: list) -> AsyncIterator[str]:
-        """流式响应处理
-        
-        注意：豆包 SDK 的流式支持可能需要特殊处理
-        """
+        """流式响应处理"""
         try:
             import asyncio
             
             def _sync_stream():
-                stream = self.client.responses.create(
+                completion = self.client.chat.completions.create(
                     model=self.model,
-                    input=messages,
-                    stream=True
+                    messages=messages,
+                    stream=True,
+                    thinking={"type": "disabled"}  # 禁用深度思考模式
                 )
-                return stream
+                return completion
             
-            stream = await asyncio.to_thread(_sync_stream)
+            completion = await asyncio.to_thread(_sync_stream)
             
-            for chunk in stream:
-                # 豆包流式响应格式
-                if hasattr(chunk, 'output') and chunk.output:
-                    for item in chunk.output:
-                        if hasattr(item, 'type') and item.type == 'message':
-                            if hasattr(item, 'content') and item.content:
-                                for content_item in item.content:
-                                    if hasattr(content_item, 'type') and content_item.type == 'output_text':
-                                        if hasattr(content_item, 'text') and content_item.text:
-                                            yield content_item.text
-                
-                # 备用格式
-                elif hasattr(chunk, 'choices') and len(chunk.choices) > 0:
-                    delta = chunk.choices[0].delta
-                    if hasattr(delta, 'content') and delta.content:
-                        yield delta.content
+            # 使用 with 确保连接自动关闭，防止连接泄漏
+            with completion:
+                for chunk in completion:
+                    if chunk.choices[0].delta.content is not None:
+                        yield chunk.choices[0].delta.content
                         
         except Exception as e:
             if "timeout" in str(e).lower():
@@ -215,26 +194,19 @@ class DoubaoAdapter(MultimodalInterface):
             raise ModelAPIError(f"Doubao API error: {str(e)}")
     
     async def test_connection(self) -> bool:
-        """测试连接
-        
-        发送一个简单的测试请求
-        """
+        """测试连接"""
         try:
             import asyncio
             
             def _sync_test():
-                # 发送一个简单的测试请求
                 test_messages = [{
                     "role": "user",
-                    "content": [{
-                        "type": "input_text",
-                        "text": "Hello"
-                    }]
+                    "content": "Hello"
                 }]
                 
-                response = self.client.responses.create(
+                response = self.client.chat.completions.create(
                     model=self.model,
-                    input=test_messages
+                    messages=test_messages
                 )
                 return response is not None
             

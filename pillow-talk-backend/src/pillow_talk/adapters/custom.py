@@ -80,6 +80,14 @@ class CustomAdapter(MultimodalInterface):
         else:
             return await self._complete_response(messages)
     
+    async def process_image_streaming(
+        self,
+        messages: list
+    ) -> AsyncIterator[str]:
+        """流式处理（用于路由直接调用）"""
+        async for chunk in self._stream_response(messages):
+            yield chunk
+    
     def _build_messages(
         self,
         image_base64: str,
@@ -298,3 +306,7 @@ class CustomAdapter(MultimodalInterface):
                 
         except Exception:
             return False
+    
+    async def close(self) -> None:
+        """关闭客户端"""
+        pass  # httpx.AsyncClient 使用 context manager，自动关闭

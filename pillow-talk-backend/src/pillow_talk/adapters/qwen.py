@@ -1,50 +1,52 @@
 """千问（Qwen）模型适配器
 
 支持阿里云百炼千问视觉模型
-使用 OpenAI 兼容的 API 接口
+使用 dashscope SDK
 """
-import json
-import httpx
+import asyncio
 from typing import AsyncIterator, Optional, List
 from .base import MultimodalInterface
 from ..models.config import Message
 from ..utils.exceptions import ModelConnectionError, ModelTimeoutError, ModelAPIError
 
+try:
+    import dashscope
+except ImportError:
+    dashscope = None  # type: ignore
+
 
 class QwenAdapter(MultimodalInterface):
     """千问视觉模型适配器
     
-    使用阿里云百炼 API（OpenAI 兼容格式）
+    使用 dashscope SDK
     """
     
     def __init__(
         self,
         api_key: str,
-        model: str = "qwen3.5-plus",
-        region: str = "beijing",  # beijing, virginia, singapore
+        model: str = "qwen-vl-max",
         timeout: int = 30
     ):
         """初始化千问适配器
         
         Args:
             api_key: 阿里云百炼 API Key (DASHSCOPE_API_KEY)
-            model: 模型名称（如 qwen3.5-plus, qwen-vl-max 等）
-            region: 地域（beijing/virginia/singapore）
+            model: 模型名称（如 qwen-vl-max, qwen-vl-plus 等）
             timeout: 请求超时时间（秒）
+            
+        Raises:
+            ImportError: 如果未安装 dashscope
         """
+        if dashscope is None:
+            raise ImportError(
+                "dashscope is required for Qwen adapter. "
+                "Install it with: pip install dashscope"
+            )
+        
         self.api_key = api_key
         self.model = model
         self.timeout = timeout
-        
-        # 根据地域设置 base_url
-        region_urls = {
-            "beijing": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-            "virginia": "https://dashscope-us.aliyuncs.com/compatible-mode/v1",
-            "singapore": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
-        }
-        
-        self.base_url = region_urls.get(region, region_urls["beijing"])
-        self.client = httpx.AsyncClient(timeout=timeout)
+        dashscope.api_key = api_key
     
     async def process_image(
         self,
@@ -53,18 +55,79 @@ class QwenAdapter(MultimodalInterface):
         conversation_history: Optional[List[Message]] = None,
         stream: bool = False
     ) -> AsyncIterator[str] | str:
-        """处理图像并返回响应
-        
-        千问使用 OpenAI 兼容的消息格式
-        """
-        messages = self._build_messages(image_base64, prompt, conversation_history)
+        """处理图像并返回响应"""
+        messages = self._build_qwen_messages(
+            image_base64,
+            prompt,
+            conversation_history
+        )
         
         if stream:
             return self._stream_response(messages)
         else:
             return await self._complete_response(messages)
     
-    def _build_messages(
+    async def process_image_streaming(
+        self,
+        messages: list
+    ) -> AsyncIterator[str]:
+        """流式处理（用于路由直接调用）
+        
+        将 OpenAI 格式的消息转换为千问格式
+        """
+        # 转换消息格式
+        qwen_messages = self._convert_messages_to_qwen_format(messages)
+        async for chunk in self._stream_response(qwen_messages):
+            yield chunk
+    
+    def _convert_messages_to_qwen_format(self, messages: list) -> list:
+        """将 OpenAI 格式的消息转换为千问格式"""
+        qwen_messages = []
+        system_prompt = None
+        
+        for msg in messages:
+            role = msg.get("role")
+            content = msg.get("content")
+            
+            # 保存 system 消息内容
+            if role == "system":
+                system_prompt = content
+                continue
+            
+            # 处理用户消息
+            if role == "user":
+                if isinstance(content, list):
+                    # OpenAI 格式的多模态内容
+                    qwen_content = []
+                    
+                    # 如果有 system prompt，将其作为第一个文本内容
+                    if system_prompt:
+                        qwen_content.append({"text": system_prompt})
+                        system_prompt = None  # 只添加一次
+                    
+                    for item in content:
+                        if item.get("type") == "image_url":
+                            image_url = item.get("image_url", {}).get("url", "")
+                            qwen_content.append({"image": image_url})
+                        elif item.get("type") == "text":
+                            qwen_content.append({"text": item.get("text", "")})
+                    
+                    qwen_messages.append({"role": "user", "content": qwen_content})
+                else:
+                    # 纯文本内容
+                    text_content = []
+                    if system_prompt:
+                        text_content.append({"text": system_prompt})
+                        system_prompt = None
+                    text_content.append({"text": content})
+                    qwen_messages.append({"role": "user", "content": text_content})
+            else:
+                # assistant 消息保持不变
+                qwen_messages.append({"role": role, "content": content})
+        
+        return qwen_messages
+    
+    def _build_qwen_messages(
         self,
         image_base64: str,
         prompt: str,
@@ -72,15 +135,11 @@ class QwenAdapter(MultimodalInterface):
     ) -> List[dict]:
         """构建千问格式的消息
         
-        千问使用 OpenAI 兼容的格式
+        千问使用特殊的消息格式：
+        - image: 图像 URL 或 base64
+        - text: 文本内容
         """
         messages = []
-        
-        # 添加系统提示
-        messages.append({
-            "role": "system",
-            "content": prompt
-        })
         
         # 添加对话历史
         if conversation_history:
@@ -91,21 +150,15 @@ class QwenAdapter(MultimodalInterface):
                         "content": msg.content
                     })
         
-        # 添加当前图像
+        # 添加当前请求（图像 + 提示词）
+        content = [
+            {"image": f"data:image/jpeg;base64,{image_base64}"},
+            {"text": prompt}
+        ]
+        
         messages.append({
             "role": "user",
-            "content": [
-                {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/jpeg;base64,{image_base64}"
-                    }
-                },
-                {
-                    "type": "text",
-                    "text": "请根据图像内容回答。"
-                }
-            ]
+            "content": content
         })
         
         return messages
@@ -113,85 +166,91 @@ class QwenAdapter(MultimodalInterface):
     async def _complete_response(self, messages: list) -> str:
         """获取完整响应"""
         try:
-            response = await self.client.post(
-                f"{self.base_url}/chat/completions",
-                json={
-                    "model": self.model,
-                    "messages": messages,
-                    "max_tokens": 1000
-                },
-                headers={"Authorization": f"Bearer {self.api_key}"}
-            )
-            
-            if response.status_code != 200:
-                raise ModelAPIError(
-                    f"Qwen API error: {response.status_code} - {response.text}"
+            def _sync_call():
+                response = dashscope.MultiModalConversation.call(
+                    api_key=self.api_key,
+                    model=self.model,
+                    messages=messages,
+                    enable_thinking=False  # 禁用深度思考模式
                 )
+                return response
             
-            data = response.json()
-            return data["choices"][0]["message"]["content"]
+            response = await asyncio.to_thread(_sync_call)
             
-        except httpx.TimeoutException:
-            raise ModelTimeoutError("Qwen API request timed out")
-        except httpx.ConnectError:
-            raise ModelConnectionError("Failed to connect to Qwen API")
+            # 解析响应
+            if response.status_code == 200:
+                return response.output.choices[0].message.content[0]["text"]
+            else:
+                raise ModelAPIError(
+                    f"Qwen API error: {response.code} - {response.message}"
+                )
+                
         except Exception as e:
-            if isinstance(e, (ModelAPIError, ModelTimeoutError, ModelConnectionError)):
+            if "timeout" in str(e).lower():
+                raise ModelTimeoutError("Qwen API request timed out")
+            elif "connect" in str(e).lower():
+                raise ModelConnectionError("Failed to connect to Qwen API")
+            elif isinstance(e, (ModelAPIError, ModelTimeoutError, ModelConnectionError)):
                 raise
             raise ModelAPIError(f"Qwen API error: {str(e)}")
     
     async def _stream_response(self, messages: list) -> AsyncIterator[str]:
         """流式响应处理"""
         try:
-            async with self.client.stream(
-                "POST",
-                f"{self.base_url}/chat/completions",
-                json={
-                    "model": self.model,
-                    "messages": messages,
-                    "max_tokens": 1000,
-                    "stream": True
-                },
-                headers={"Authorization": f"Bearer {self.api_key}"}
-            ) as response:
-                if response.status_code != 200:
+            def _sync_stream():
+                responses = dashscope.MultiModalConversation.call(
+                    api_key=self.api_key,
+                    model=self.model,
+                    messages=messages,
+                    stream=True,
+                    incremental_output=True,
+                    enable_thinking=False  # 禁用深度思考模式
+                )
+                return responses
+            
+            responses = await asyncio.to_thread(_sync_stream)
+            
+            for response in responses:
+                if response.status_code == 200:
+                    content = response.output.choices[0].message.content
+                    if isinstance(content, list) and len(content) > 0:
+                        if "text" in content[0]:
+                            yield content[0]["text"]
+                else:
                     raise ModelAPIError(
-                        f"Qwen API error: {response.status_code}"
+                        f"Qwen API error: {response.code} - {response.message}"
                     )
-                
-                async for line in response.aiter_lines():
-                    if line.startswith("data: "):
-                        data = line[6:]
-                        if data == "[DONE]":
-                            break
                         
-                        try:
-                            chunk = json.loads(data)
-                            if content := chunk["choices"][0]["delta"].get("content"):
-                                yield content
-                        except (json.JSONDecodeError, KeyError, IndexError):
-                            continue
-                            
-        except httpx.TimeoutException:
-            raise ModelTimeoutError("Qwen API request timed out")
-        except httpx.ConnectError:
-            raise ModelConnectionError("Failed to connect to Qwen API")
         except Exception as e:
-            if isinstance(e, (ModelAPIError, ModelTimeoutError, ModelConnectionError)):
+            if "timeout" in str(e).lower():
+                raise ModelTimeoutError("Qwen API request timed out")
+            elif "connect" in str(e).lower():
+                raise ModelConnectionError("Failed to connect to Qwen API")
+            elif isinstance(e, (ModelAPIError, ModelTimeoutError, ModelConnectionError)):
                 raise
             raise ModelAPIError(f"Qwen API error: {str(e)}")
     
     async def test_connection(self) -> bool:
         """测试连接"""
         try:
-            response = await self.client.get(
-                f"{self.base_url}/models",
-                headers={"Authorization": f"Bearer {self.api_key}"}
-            )
-            return response.status_code == 200
+            def _sync_test():
+                test_messages = [{
+                    "role": "user",
+                    "content": [{"text": "Hello"}]
+                }]
+                
+                response = dashscope.MultiModalConversation.call(
+                    api_key=self.api_key,
+                    model=self.model,
+                    messages=test_messages
+                )
+                return response.status_code == 200
+            
+            return await asyncio.to_thread(_sync_test)
+            
         except Exception:
             return False
     
     async def close(self) -> None:
         """关闭客户端"""
-        await self.client.aclose()
+        pass  # dashscope 不需要显式关闭

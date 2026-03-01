@@ -19,9 +19,10 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+.vscode
 
 # Virtual environments
-venv/
+pillow-talk-backend/venv/
 ENV/
 env/
 .venv

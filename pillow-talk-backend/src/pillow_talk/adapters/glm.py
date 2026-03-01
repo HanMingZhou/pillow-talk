@@ -25,8 +25,7 @@ class GLMAdapter(MultimodalInterface):
         self,
         api_key: str,
         model: str = "glm-4.6v-flash",
-        timeout: int = 30,
-        enable_thinking: bool = False
+        timeout: int = 30
     ):
         """初始化 GLM 适配器
         
@@ -34,7 +33,6 @@ class GLMAdapter(MultimodalInterface):
             api_key: 智谱 AI API Key
             model: 模型名称（如 glm-4.6v-flash, glm-4v-plus 等）
             timeout: 请求超时时间（秒）
-            enable_thinking: 是否启用思考模式
             
         Raises:
             ImportError: 如果未安装 zai-sdk
@@ -48,7 +46,6 @@ class GLMAdapter(MultimodalInterface):
         self.api_key = api_key
         self.model = model
         self.timeout = timeout
-        self.enable_thinking = enable_thinking
         
         # 初始化智谱 AI 客户端
         self.client = ZhipuAiClient(api_key=self.api_key)
@@ -74,6 +71,14 @@ class GLMAdapter(MultimodalInterface):
             return self._stream_response(messages)
         else:
             return await self._complete_response(messages)
+    
+    async def process_image_streaming(
+        self,
+        messages: list
+    ) -> AsyncIterator[str]:
+        """流式处理（用于路由直接调用）"""
+        async for chunk in self._stream_response(messages):
+            yield chunk
     
     def _build_glm_messages(
         self,
@@ -127,16 +132,11 @@ class GLMAdapter(MultimodalInterface):
         try:
             # GLM SDK 使用同步调用，需要在异步环境中包装
             def _sync_call():
-                kwargs = {
-                    "model": self.model,
-                    "messages": messages
-                }
-                
-                # 如果启用思考模式
-                if self.enable_thinking:
-                    kwargs["thinking"] = {"type": "enabled"}
-                
-                response = self.client.chat.completions.create(**kwargs)
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    thinking={"type": "disabled"}  # 禁用思考模式
+                )
                 return response
             
             response = await asyncio.to_thread(_sync_call)
@@ -164,24 +164,20 @@ class GLMAdapter(MultimodalInterface):
         """流式响应处理"""
         try:
             def _sync_stream():
-                kwargs = {
-                    "model": self.model,
-                    "messages": messages,
-                    "stream": True
-                }
-                
-                # 如果启用思考模式
-                if self.enable_thinking:
-                    kwargs["thinking"] = {"type": "enabled"}
-                
-                stream = self.client.chat.completions.create(**kwargs)
-                return stream
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    stream=True,
+                    thinking={"type": "disabled"}  # 禁用思考模式
+                )
+                return response
             
-            stream = await asyncio.to_thread(_sync_stream)
+            response = await asyncio.to_thread(_sync_stream)
             
-            for chunk in stream:
+            for chunk in response:
                 if hasattr(chunk, 'choices') and len(chunk.choices) > 0:
                     delta = chunk.choices[0].delta
+                    # 只输出 content，忽略 reasoning_content
                     if hasattr(delta, 'content') and delta.content:
                         yield delta.content
                         
