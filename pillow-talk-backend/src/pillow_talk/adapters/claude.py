@@ -338,3 +338,8 @@ class ClaudeAdapter(MultimodalInterface):
                 
         except Exception:
             return False
+    
+    async def close(self) -> None:
+        """关闭客户端连接（清理资源）"""
+        # httpx.AsyncClient 使用 context manager，自动关闭
+        pass

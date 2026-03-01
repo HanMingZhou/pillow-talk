@@ -213,3 +213,8 @@ class GLMAdapter(MultimodalInterface):
             
         except Exception:
             return False
+    
+    async def close(self):
+        """关闭客户端连接（清理资源）"""
+        # GLM SDK 不需要显式关闭连接
+        pass
