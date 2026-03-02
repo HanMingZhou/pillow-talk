@@ -23,6 +23,7 @@ wheels/
 
 # Virtual environments
 pillow-talk-backend/venv/
+pillow-talk-web/node_modules
 ENV/
 env/
 .venv

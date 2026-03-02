@@ -29,9 +29,6 @@ fi
 echo ""
 echo "🌐 启动 Web 服务器..."
 PORT=8080
-while lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null 2>&1; do
-    PORT=$((PORT + 1))
-done
 
 echo "   ✓ 使用端口: $PORT"
 echo ""
