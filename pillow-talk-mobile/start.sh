@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# Pillow Talk Web 版启动脚本
+# Pillow Talk 移动端开发启动脚本
 
 set -e  # 遇到错误立即退出
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
-echo "🛏️  Pillow Talk Web 版启动"
+echo "🛏️  Pillow Talk 移动端开发服务器启动"
 echo "=============================="
 echo ""
 

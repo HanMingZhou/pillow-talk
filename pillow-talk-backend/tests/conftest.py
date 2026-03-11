@@ -2,7 +2,7 @@
 import pytest
 from typing import AsyncGenerator
 from httpx import AsyncClient
-from pillow_talk.main import app
+from main import app
 
 
 @pytest.fixture

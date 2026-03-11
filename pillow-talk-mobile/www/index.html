@@ -554,7 +554,7 @@
                 <h3>🔗 连接设置</h3>
                 <div class="setting-item">
                     <label>后端地址</label>
-                    <input type="text" id="apiUrl" value="http://localhost:8000">
+                    <input type="text" id="apiUrl" value="http://127.0.0.1:8000">
                 </div>
             </div>
 
@@ -1100,16 +1100,28 @@
         });
         
         // 初始化
+        let lastBackendStatus = null; // null: 初始, true: 成功, false: 失败
+
         async function checkBackend() {
             try {
                 const response = await fetch(`${apiUrlInput.value}/health`);
                 const data = await response.json();
-                if (data.status === 'healthy') {
-                    showStatus('后端连接成功', 'success');
-                    return true;
+                const currentStatus = (data.status === 'healthy');
+                
+                if (currentStatus !== lastBackendStatus) {
+                    if (currentStatus) {
+                        showStatus('后端连接成功', 'success');
+                    } else {
+                        showStatus('后端服务错误', 'error');
+                    }
+                    lastBackendStatus = currentStatus;
                 }
+                return currentStatus;
             } catch (error) {
-                showStatus('后端连接失败', 'error');
+                if (lastBackendStatus !== false) {
+                    showStatus('后端连接失败', 'error');
+                    lastBackendStatus = false;
+                }
                 return false;
             }
         }

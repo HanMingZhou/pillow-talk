@@ -11,7 +11,7 @@
   - 字节跳动豆包（Doubao）视觉模型
   - 智谱 AI GLM-4V 系列视觉模型
   - Google Gemini 多模态模型
-  - Anthropic Claude（待实现）
+  - Anthropic Claude 3 系列
 - 💬 **多轮对话**：支持上下文保持的连续对话
 - 🎭 **Prompt 模板**：内置多种人设模板（博物馆讲解员、可爱宠物、科普专家等）
 - 🔒 **安全可靠**：API Key 加密存储、限流保护、输入验证
@@ -121,6 +121,7 @@ POST /api/v1/chat
 - `qwen`: 阿里云千问视觉模型
 - `glm`: 智谱 AI GLM-4V 系列视觉模型
 - `gemini`: Google Gemini 多模态模型
+- `claude`: Anthropic Claude 3 系列
 
 ## 开发指南
 
@@ -164,15 +165,35 @@ pillow-talk-backend/
 │       ├── main.py              # FastAPI 应用入口
 │       ├── config.py            # 配置管理
 │       ├── api/                 # API 路由
+│       │   ├── routes.py
+│       │   ├── middleware.py
+│       │   └── dependencies.py
 │       ├── core/                # 核心业务逻辑
+│       │   ├── conversation.py
+│       │   ├── prompt.py
+│       │   └── image.py
 │       ├── adapters/            # 模型适配器
+│       │   ├── base.py
+│       │   ├── openai.py
+│       │   ├── gemini.py
+│       │   ├── glm.py
+│       │   ├── doubao.py
+│       │   ├── qwen.py
+│       │   └── claude.py
 │       ├── tts/                 # TTS 服务
+│       │   ├── adapters/
+│       │   │   ├── openai_adapter.py
+│       │   │   ├── edge_adapter.py
+│       │   │   └── ...
+│       │   ├── system.py
+│       │   └── config.py
 │       ├── models/              # 数据模型
 │       ├── services/            # 服务层
 │       └── utils/               # 工具函数
-├── tests/                       # 测试代码
+├── tests/                       # 测试目录结构
 ├── pyproject.toml              # Poetry 配置
-├── Dockerfile                  # Docker 配置
+├── Dockerfile
+├── docker-compose.yml
 └── README.md
 ```
 

@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Pillow Talk - 多模态智能视觉语音助手后端服务"
 authors = ["Pillow Talk Team <team@pillowtalk.ai>"]
 readme = "README.md"
-packages = [{include = "pillow_talk", from = "src"}]
+packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -63,7 +63,7 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "--cov=src/pillow_talk --cov-report=html --cov-report=term-missing"
+addopts = "--cov=pillow_talk --cov-report=html --cov-report=term-missing"
 
 [tool.hypothesis]
 max_examples = 100
