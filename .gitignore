@@ -20,7 +20,7 @@ wheels/
 .installed.cfg
 *.egg
 .vscode
-
+.idea
 # Virtual environments
 pillow-talk-backend/venv/
 pillow-talk-mobile/node_modules/
