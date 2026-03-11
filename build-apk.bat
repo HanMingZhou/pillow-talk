@@ -3,22 +3,14 @@ chcp 65001 >nul
 setlocal EnableDelayedExpansion
 
 :: ============================================================
-:: Pillow Talk Android APK 构建脚本 (Windows)
-:: 
-:: 功能:
-:: 1. 自动同步 Web 资源到 Android 工程
-:: 2. 验证并同步 Java 17 编译环境
-:: 3. 自动构建 Debug/Release APK
-:: 4. 可选自动安装到连接的设备
+:: Pillow Talk Android APK BUILD SCRIPT (Windows)
 :: ============================================================
 
 title Pillow Talk APK Builder
 
-:: 默认参数
 set "BUILD_MODE=debug"
 set "INSTALL_AFTER_BUILD=false"
 
-:: 解析参数
 if "%~1"=="release" set "BUILD_MODE=release"
 if "%~1"=="debug" set "BUILD_MODE=debug"
 if "%~1"=="install" (
@@ -28,63 +20,57 @@ if "%~1"=="install" (
 if "%~2"=="install" set "INSTALL_AFTER_BUILD=true"
 
 if "%~1"=="--help" goto :show_help
-if "%~1"=="-h" goto :show_help
 
-:: 路径配置
-set "PROJECT_DIR=pillow-talk-mobile"
-set "ANDROID_DIR=%PROJECT_DIR%\android"
-set "APK_OUTPUT_DIR=%ANDROID_DIR%\app\build\outputs\apk"
+set "PROJECT_NAME=pillow-talk-mobile"
+set "ANDROID_PATH=%PROJECT_NAME%\android"
+set "APK_OUT_ROOT=%ANDROID_PATH%\app\build\outputs\apk"
 
 echo.
 echo ================================================
-echo   Pillow Talk Android APK 构建
-echo   构建模式: %BUILD_MODE%
+echo   Pillow Talk Android APK Build
+echo   Mode: %BUILD_MODE%
 echo ================================================
 echo.
 
-:: ========== 检查环境依赖 ==========
-echo [步骤 1/5] 正在检查环境依赖...
+:: ========== Step 1: Detect Env ==========
+echo [Step 1/5] Checking environment...
 echo ------------------------------------------------
 
-:: Node.js
-node -v >nul 2>&1 || (echo [错误] 未安装 Node.js && pause && exit /b 1)
-for /f "tokens=1" %%a in ('node -v') do echo [成功] Node.js %%a
+node -v >nul 2>&1 || (echo [Error] Node.js not found && pause && exit /b 1)
+for /f "tokens=1" %%a in ('node -v') do echo [OK] Node %%a
 
-:: npm
-call npm -v >nul 2>&1 || (echo [错误] 未安装 npm && pause && exit /b 1)
-for /f %%a in ('call npm -v') do echo [成功] npm v%%a
+call npm -v >nul 2>&1 || (echo [Error] npm not found && pause && exit /b 1)
+for /f %%a in ('call npm -v') do echo [OK] npm v%%a
 
-:: JAVA_HOME
 if not defined JAVA_HOME (
     for /d %%D in ("C:\Program Files\Java\jdk*") do set "JAVA_HOME=%%D"
 )
 if defined JAVA_HOME (
-    echo [成功] JAVA_HOME: %JAVA_HOME%
+    echo [OK] JAVA_HOME: %JAVA_HOME%
 ) else (
-    echo [错误] 未找到 JDK 环境，请设置 JAVA_HOME
+    echo [Error] JAVA_HOME not set
     pause && exit /b 1
 )
 
-:: Android SDK
 if not defined ANDROID_HOME (
     if exist "%LOCALAPPDATA%\Android\Sdk" set "ANDROID_HOME=%LOCALAPPDATA%\Android\Sdk"
 )
-if defined ANDROID_HOME echo [成功] Android SDK 已就绪
+if defined ANDROID_HOME echo [OK] Android SDK ready
 
 echo.
 
-:: ========== 安装依赖 ==========
-echo [步骤 2/5] 正在安装项目依赖...
+:: ========== Step 2: Install Deps ==========
+echo [Step 2/5] Installing dependencies...
 echo ------------------------------------------------
 
-if exist "%PROJECT_DIR%\node_modules" (
-    echo [信息] Node 依赖已存在，跳过安装
+if exist "%PROJECT_NAME%\node_modules" (
+    echo [Info] Dependencies exists. Skipping.
 ) else (
-    echo [信息] 正在安装 Node 依赖...
-    cd "%PROJECT_DIR%"
+    echo [Info] Running npm install...
+    cd "%PROJECT_NAME%"
     call npm install --no-audit --no-fund
     if errorlevel 1 (
-        echo [错误] 依赖安装失败
+        echo [Error] npm install failed
         cd .. && pause && exit /b 1
     )
     cd ..
@@ -92,40 +78,39 @@ if exist "%PROJECT_DIR%\node_modules" (
 
 echo.
 
-:: ========== 同步资源 & 环境修复 ==========
-echo [步骤 3/5] 正在同步资源并修复环境兼容性...
+:: ========== Step 3: Sync & Patch ==========
+echo [Step 3/5] Syncing resources and patching...
 echo ------------------------------------------------
 
-:: 确保 www 目录内容是最新的
-if exist "%PROJECT_DIR%\index.html" (
-    if not exist "%PROJECT_DIR%\www" mkdir "%PROJECT_DIR%\www"
-    copy /y "%PROJECT_DIR%\index.html" "%PROJECT_DIR%\www\" >nul
+if exist "%PROJECT_NAME%\index.html" (
+    if not exist "%PROJECT_NAME%\www" mkdir "%PROJECT_NAME%\www"
+    copy /y "%PROJECT_NAME%\index.html" "%PROJECT_NAME%\www\" >nul
 )
 
-cd "%PROJECT_DIR%"
+cd "%PROJECT_NAME%"
 call npx cap sync android
 if errorlevel 1 (
-    echo [错误] 资源同步失败
+    echo [Error] Sync failed
     cd .. && pause && exit /b 1
 )
 
-:: ----- 自动适配: 确保使用 Java 17 进行编译 (匹配本地环境) -----
-echo [信息] 正在配置 Java 17 编译环境...
-powershell -Command "(Get-Content android\app\capacitor.build.gradle) -replace 'VERSION_21', 'VERSION_17' | Set-Content android\app\capacitor.build.gradle"
-powershell -Command "(Get-Content android\capacitor-cordova-android-plugins\build.gradle) -replace 'VERSION_21', 'VERSION_17' | Set-Content android\capacitor-cordova-android-plugins\build.gradle"
-powershell -Command "(Get-Content node_modules\@capacitor\android\capacitor\build.gradle) -replace 'VERSION_21', 'VERSION_17' | Set-Content node_modules\@capacitor\android\capacitor\build.gradle"
-:: -----------------------------------------------------------
+:: ----- Patching Java 17 compatibility -----
+echo [Info] Configuring Java 17 for build.gradle files...
+powershell -ExecutionPolicy Bypass -Command "(Get-Content android\app\capacitor.build.gradle) -replace 'VERSION_21', 'VERSION_17' | Set-Content android\app\capacitor.build.gradle"
+powershell -ExecutionPolicy Bypass -Command "(Get-Content android\capacitor-cordova-android-plugins\build.gradle) -replace 'VERSION_21', 'VERSION_17' | Set-Content android\capacitor-cordova-android-plugins\build.gradle"
+powershell -ExecutionPolicy Bypass -Command "(Get-Content node_modules\@capacitor\android\capacitor\build.gradle) -replace 'VERSION_21', 'VERSION_17' | Set-Content node_modules\@capacitor\android\capacitor\build.gradle"
+:: ------------------------------------------
 
 cd ..
-echo [成功] 同步及版本补丁应用完成
+echo [OK] Synchronization and environment setup complete
 
 echo.
 
-:: ========== 构建 APK ==========
-echo [步骤 4/5] 正在构建 APK (这将需要几分钟)...
+:: ========== Step 4: Gradle Build ==========
+echo [Step 4/5] Building APK (This might take a while)...
 echo ------------------------------------------------
 
-cd "%ANDROID_DIR%"
+cd "%ANDROID_PATH%"
 call gradlew.bat clean >nul
 if "%BUILD_MODE%"=="release" (
     call gradlew.bat assembleRelease
@@ -135,7 +120,7 @@ if "%BUILD_MODE%"=="release" (
 
 if errorlevel 1 (
     echo.
-    echo [错误] 构建失败！请检查上方输出。
+    echo [Error] Build failed. Please check the logs.
     cd ..\.. && pause && exit /b 1
 )
 
@@ -143,48 +128,42 @@ cd ..\..
 
 echo.
 
-:: ========== 完成展示 & 安装 ==========
-echo [步骤 5/5] 构建成功！正在整理结果...
+:: ========== Step 5: Finalize ==========
+echo [Step 5/5] Build finished! Gathering output...
 echo ------------------------------------------------
 
 if "%BUILD_MODE%"=="release" (
-    set "APK_PATH=%APK_OUTPUT_DIR%\release\app-release-unsigned.apk"
-    if not exist "!APK_PATH!" set "APK_PATH=%APK_OUTPUT_DIR%\release\app-release.apk"
+    set "APK_FILE_PATH=%APK_OUT_ROOT%\release\app-release-unsigned.apk"
+    if not exist "!APK_FILE_PATH!" set "APK_FILE_PATH=%APK_OUT_ROOT%\release\app-release.apk"
 ) else (
-    set "APK_PATH=%APK_OUTPUT_DIR%\debug\app-debug.apk"
+    set "APK_FILE_PATH=%APK_OUT_ROOT%\debug\app-debug.apk"
 )
 
-if exist "!APK_PATH!" (
-    echo [成功] APK 已生成: !APK_PATH!
+if exist "!APK_FILE_PATH!" (
+    echo [OK] APK Location: !APK_FILE_PATH!
     
-    :: 自动安装
     if "%INSTALL_AFTER_BUILD%"=="true" (
-        echo [信息] 检测到设备，正在尝试安装...
-        adb install -r "!APK_PATH!"
+        echo [Info] Attempting to install on device...
+        adb install -r "!APK_FILE_PATH!"
         if errorlevel 1 (
-            echo [警告] 自动安装失败，请手动安装。
+            echo [Warning] Installation failed.
         ) else (
-            echo [成功] 应用已连带更新到手机！
+            echo [OK] App installed and updated on the device!
         )
     )
 ) else (
-    echo [错误] 找不到 APK 文件
+    echo [Error] APK not found in !APK_FILE_PATH!
     pause && exit /b 1
 )
 
 echo.
-echo 构建计划已完成。可以关闭此窗口。
+echo Build process complete.
 pause
 exit /b 0
 
 :show_help
 echo.
-echo Pillow Talk Android APK 构建助手
+echo Pillow Talk Android APK Build Helper
 echo.
-echo 用法: build-apk.bat [debug^|release] [install]
-echo.
-echo 示例:
-echo   .\build-apk.bat           - 仅构建包
-echo   .\build-apk.bat install   - 构建并安装到手机
-echo.
+echo Usage: build-apk.bat [debug|release] [install]
 exit /b 0
