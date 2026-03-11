@@ -206,8 +206,18 @@ sync_resources() {
 
     cd "$PROJECT_DIR"
     npx cap sync android
+    
+    # ----- 自动适配: 确保使用 Java 17 进行编译 (匹配本地环境) -----
+    print_info "正在配置 Java 17 编译环境..."
+    if command -v sed &> /dev/null; then
+        sed -i 's/VERSION_21/VERSION_17/g' android/app/capacitor.build.gradle 2>/dev/null || true
+        sed -i 's/VERSION_21/VERSION_17/g' android/capacitor-cordova-android-plugins/build.gradle 2>/dev/null || true
+        sed -i 's/VERSION_21/VERSION_17/g' node_modules/@capacitor/android/capacitor/build.gradle 2>/dev/null || true
+    fi
+    # -----------------------------------------------------------
+    
     cd ..
-    print_success "资源同步完成"
+    print_success "资源同步及环境补丁完成"
 }
 
 # ========== 构建 APK ==========
